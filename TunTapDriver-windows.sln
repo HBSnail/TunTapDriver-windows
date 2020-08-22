@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30406.217
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TunTapDriver-windows", "TunTapDriver-windows\TunTapDriver-windows.csproj", "{B2C9F3E3-7926-4455-A235-DC3BB50A7570}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{389AFD32-CBDF-4CA8-A1F1-41C361AE82E0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B2C9F3E3-7926-4455-A235-DC3BB50A7570}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C9F3E3-7926-4455-A235-DC3BB50A7570}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C9F3E3-7926-4455-A235-DC3BB50A7570}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C9F3E3-7926-4455-A235-DC3BB50A7570}.Release|Any CPU.Build.0 = Release|Any CPU
+		{389AFD32-CBDF-4CA8-A1F1-41C361AE82E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{389AFD32-CBDF-4CA8-A1F1-41C361AE82E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{389AFD32-CBDF-4CA8-A1F1-41C361AE82E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{389AFD32-CBDF-4CA8-A1F1-41C361AE82E0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {23CF1DF0-7BD6-4B5D-AFF0-1B164F6930AF}
+	EndGlobalSection
+EndGlobal
