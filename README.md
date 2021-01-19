@@ -1,6 +1,6 @@
-#UniversalTunTapDriver
+# UniversalTunTapDriver
 ------
-##A driver for support basic operations on both linux and windows platform.
+## A driver for support basic operations on both linux and windows platform.
 
 UniversalTunTapDriver is a lightweight library which allows you to  control TUN/TAP devices on your **windows** or **linux** machine easily.
 
@@ -87,7 +87,7 @@ This process should be done by yourself.
  */
 ```
 ##### **4.1 Create&initial the deivce**
-```c#
+```csharp
  // On linux please set the name and guid to the same value in the structure TunTapDeviceInfo. like "tun0" "tap0" ect.
     TunTapDeviceInfo dInfo; 
     dInfo.Name = "NAME";
@@ -96,7 +96,7 @@ This process should be done by yourself.
  // After this you will successfully create and initial a TUN/TAP device except the name or guid does not exist or the divice was occupied by other process. 
 ```
 ##### **4.2 Config&set device states**
-```c#
+```csharp
  // The following code only works on windows
  // On linux please use "ifconfig" or "ip" in the terminal.
 
@@ -105,7 +105,7 @@ This process should be done by yourself.
 
 ```
 ##### **4.3 Create&get device I/O stream**
-```c#
+```csharp
  Device.CreateDeviceIOStream(1500);
  FileStream DeviceIOStream = Device.TunTapDeviceIOStream;
 ```
