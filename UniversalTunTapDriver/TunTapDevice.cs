@@ -374,25 +374,227 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 
  */
+
 using System;
 using System.IO;
+using System.Net;
 using System.Runtime.InteropServices;
-
-namespace TunTapDriver_windows
+using Microsoft.Win32.SafeHandles;
+using static UniversalTunTapDriver.TunTapHelper;
+using static UniversalTunTapDriver.TunTapHelper_windows;
+using static UniversalTunTapDriver.TunTapHelper_linux;
+using static UniversalTunTapDriver.WinAPI;
+namespace UniversalTunTapDriver
 {
-    public static  class WinAPIHelper
+    public class TunTapDevice
     {
-        public const uint FILE_ATTRIBUTE_SYSTEM = 0x4;
-        public const uint FILE_FLAG_OVERLAPPED = 0x40000000;
-        public const uint METHOD_BUFFERED = 0;
-        public const uint FILE_ANY_ACCESS = 0;
-        public const uint FILE_DEVICE_UNKNOWN = 0x22;
+        private int DeviceHandle;
+        public string Guid;
+        public string Name;
+        public FileStream TunTapDeviceIOStream;
+        public TunTapDevice(TunTapDeviceInfo info)
+        {
+            this.Guid = info.Guid;
+            this.Name = info.Name;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                this.DeviceHandle = (int)GetDevicePtrByGuid(this.Guid);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                //On linux platform GUID==Name
+                this.DeviceHandle = GetDevicePtrByName(this.Name);
+            }
+            else
+            {
+                throw new PlatformNotSupportedException("This program can only run on windows OR linux platform.");
+            }
 
-        [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern IntPtr CreateFile(string FileName, [MarshalAs(UnmanagedType.U4)] FileAccess DesiredAccess, [MarshalAs(UnmanagedType.U4)] FileShare ShareMode, uint SecurityAttributes, [MarshalAs(UnmanagedType.U4)] FileMode CreationDisposition, uint FlagsAndAttributes, IntPtr TemplateFile);
+        }
 
+        public bool SetConnectionState(ConnectionStatus iState)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                uint Length = 0;
+                IntPtr cconfig = Marshal.AllocHGlobal(4);
+                Marshal.WriteInt32(cconfig, (int)iState);
+                return DeviceIoControl((IntPtr)DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_SET_MEDIA_STATUS, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 4, cconfig, 4, ref Length, IntPtr.Zero);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                //On linux platform this operation must be done manually
+                //Always return true
+                return true;
+            }
+            else
+            {
+                //return false;
+                throw new PlatformNotSupportedException("This program can only run on windows OR linux platform.");
+            }
+            return false;
+        }
+        public bool CreateDeviceIOStream(int buffersize)
+        {
+            if (TunTapDeviceIOStream != null)
+                return false;
+            SafeFileHandle HANDLE = new SafeFileHandle((IntPtr)DeviceHandle, true);
+            if (HANDLE.IsInvalid)
+                return false;
+            TunTapDeviceIOStream = new FileStream(HANDLE, FileAccess.ReadWrite, buffersize, true);
+            return true;
+        }
+        public void Close()
+        {
+            if (TunTapDeviceIOStream != null)
+            {
+                TunTapDeviceIOStream.Close();
+                TunTapDeviceIOStream.Dispose();
+                TunTapDeviceIOStream = null;
+            }
+        }
 
-        [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool DeviceIoControl(IntPtr Device, uint IoControlCode, IntPtr InBuffer, uint InBufferSize, IntPtr OutBuffer, uint OutBufferSize, ref uint BytesReturned, IntPtr Overlapped);
+        public bool ConfigTun(IPAddress LocalIPAddress, IPAddress remIPAddress, IPAddress Mask)
+        {
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                uint Length = 0;
+                IntPtr cconfig = Marshal.AllocHGlobal(12);
+                byte[] IP = BitConverter.GetBytes(System.Convert.ToUInt32(LocalIPAddress.Address));
+                for (var i = 0; i <= IP.Length - 1; i++)
+                    Marshal.WriteByte(cconfig, i, IP[i]);
+                IP = BitConverter.GetBytes(System.Convert.ToUInt32(remIPAddress.Address));
+                for (var i = 0; i <= IP.Length - 1; i++)
+                    Marshal.WriteByte(cconfig, i + 4, IP[i]);
+                IP = BitConverter.GetBytes(System.Convert.ToUInt32(Mask.Address));
+                for (var i = 0; i <= IP.Length - 1; i++)
+                    Marshal.WriteByte(cconfig, i + 8, IP[i]);
+                return DeviceIoControl((IntPtr)DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_CONFIG_TUN, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 12, cconfig, 12, ref Length, IntPtr.Zero);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                //On linux platform this operation must be done manually
+                //Always return true
+                return true;
+            }
+            else
+            {
+                //return false;
+                throw new PlatformNotSupportedException("This program can only run on windows OR linux platform.");
+            }
+            return false;
+
+        }
+        public bool ConfigPoint2Point(IPAddress LocalIPAddress, IPAddress RemoteIPAddress)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                uint Length = 0;
+                IntPtr cconfig = Marshal.AllocHGlobal(8);
+                byte[] IP = BitConverter.GetBytes(System.Convert.ToUInt32(LocalIPAddress.Address));
+                for (var i = 0; i <= IP.Length - 1; i++)
+                    Marshal.WriteByte(cconfig, i, IP[i]);
+                IP = BitConverter.GetBytes(System.Convert.ToUInt32(RemoteIPAddress.Address));
+                for (var i = 0; i <= IP.Length - 1; i++)
+                    Marshal.WriteByte(cconfig, i + 4, IP[i]);
+                return DeviceIoControl((IntPtr)DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 8, cconfig, 8, ref Length, IntPtr.Zero);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                //On linux platform this operation must be done manually
+                //Always return true
+                return true;
+            }
+            else
+            {
+                //return false;
+                throw new PlatformNotSupportedException("This program can only run on windows OR linux platform.");
+            }
+            return false;
+        }
+
+        public byte[] GetMAC()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                uint Length = 0;
+                IntPtr cconfig = Marshal.AllocHGlobal(6);
+                if (DeviceIoControl((IntPtr)DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_GET_MAC, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 6, cconfig, 6, ref Length, IntPtr.Zero))
+                {
+                    byte[] ret = new byte[Length - 1 + 1];
+                    for (int i = 0; i <= Length - 1; i++)
+                        ret[i] = Marshal.ReadByte(cconfig, i);
+                    return ret;
+                }
+                return null;
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                //NotSupport ON LINUX
+
+                return new byte[] { 0, 0, 0, 0, 0, 0 };
+            }
+            else
+            {
+                //return false;
+                throw new PlatformNotSupportedException("This program can only run on windows OR linux platform.");
+            }
+            return null;
+        }
+
+        public string GetVersion()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                uint Length = 0;
+                IntPtr cconfig = Marshal.AllocHGlobal(12);
+                if (DeviceIoControl((IntPtr)DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_GET_VERSION, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 12, cconfig, 12, ref Length, IntPtr.Zero))
+                {
+                    string ret = Marshal.ReadInt32(cconfig, 0) + "." + Marshal.ReadInt32(cconfig, 4);
+                    if (Marshal.ReadInt32(cconfig, 8) == 1)
+                        ret += " (DEBUG)";
+                    return ret;
+                }
+                return "UNDEFINED";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                //NotSupport ON LINUX
+                return "UNIVERSAL TUN/TAP DRIVER";
+            }
+            else
+            {
+                //return false;
+                throw new PlatformNotSupportedException("This program can only run on windows OR linux platform.");
+            }
+            return "UNDEFINED";
+        }
+
+        public int GetMTU()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                uint Length = 0;
+                IntPtr cconfig = Marshal.AllocHGlobal(4);
+                if (DeviceIoControl((IntPtr)DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_GET_MTU, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 4, cconfig, 4, ref Length, IntPtr.Zero))
+                    return Marshal.ReadInt32(cconfig, 0);
+                return -1;
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                //NotSupport ON LINUX
+                return int.MaxValue;
+            }
+            else
+            {
+                //return false;
+                throw new PlatformNotSupportedException("This program can only run on windows OR linux platform.");
+            }
+            return -1;
+        }
+
     }
+
+
 }

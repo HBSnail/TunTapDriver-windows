@@ -375,120 +375,44 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
  */
 using System;
-using System.IO;
-using System.Net;
-using System.Runtime.InteropServices;
-using Microsoft.Win32.SafeHandles;
-using static TunTapDriver_windows.TunTapHelper;
-using static TunTapDriver_windows.WinAPIHelper;
 
 
-namespace TunTapDriver_windows
+namespace UniversalTunTapDriver
 {
-    public class TunTapDevice
+    public static class TunTapHelper_linux
     {
-        private IntPtr DeviceHandle;
-        public string Guid;
-        public string Name;
-        public FileStream TunTapDeviceIOStream;
-        public TunTapDevice(TunTapDeviceInfo info)
-        {
-            this.Guid = info.Guid;
-            this.Name = info.Name;
-            this.DeviceHandle = GetDevicePtrByGuid(this.Guid);
-        }
+        const UInt32 TUNSETIFF = 1074025674;
 
-        public bool SetConnectionState(ConnectionStatus iState)
+        public static int GetDevicePtrByName(string Name)
         {
-            uint Length = 0;
-            IntPtr cconfig = Marshal.AllocHGlobal(4);
-            Marshal.WriteInt32(cconfig, (int)iState);
-            return DeviceIoControl(DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_SET_MEDIA_STATUS, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 4, cconfig, 4,ref Length, IntPtr.Zero);
-        }
-        public bool CreateDeviceIOStream(int buffersize)
-        {
-            if (TunTapDeviceIOStream != null)
-                return false;
-            SafeFileHandle SHandle = new SafeFileHandle(DeviceHandle, true);
-            if (SHandle.IsInvalid)
-                return false;
-            TunTapDeviceIOStream = new FileStream(SHandle, FileAccess.ReadWrite, buffersize, true);
-            return true;
-        }
-        public void Close()
-        {
-            if (TunTapDeviceIOStream != null)
+
+            int TUNinterface = LinuxAPI.Open("/dev/net/tun", LinuxAPI.O_NONBLOCK | LinuxAPI.O_RDWR);
+            if (TUNinterface >= 0)
             {
-                TunTapDeviceIOStream.Close();
-                TunTapDeviceIOStream.Dispose();
-                TunTapDeviceIOStream = null;
+                byte[] ifreqFREG0 = System.Text.Encoding.ASCII.GetBytes(Name);
+                Array.Resize(ref ifreqFREG0, 16);
+                byte[] ifreqFREG1 = { 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+                //IFF_TUN | IFF_NO_PI == 4097 == 1001 == 0x10,0x01  tun0
+                byte[] ifreq = BytesPlusBytes(ifreqFREG0, ifreqFREG1);
+                int stat = LinuxAPI.Ioctl(TUNinterface, TUNSETIFF, ifreq);
+                if (stat >= 0)
+                {
+                    return TUNinterface;
+                }
             }
+            return 0;
         }
 
-        public bool ConfigTun(IPAddress LocalIPAddress, IPAddress Mask)
+        private static byte[] BytesPlusBytes(byte[] A, byte[] B)
         {
-            uint Length = 0;
-            IntPtr cconfig = Marshal.AllocHGlobal(12);
-            byte[] IP = BitConverter.GetBytes(System.Convert.ToUInt32(LocalIPAddress.Address));
-            for (var i = 0; i <= IP.Length - 1; i++)
-                Marshal.WriteByte(cconfig, i, IP[i]);
-            IP = BitConverter.GetBytes(System.Convert.ToUInt32(LocalIPAddress.Address & Mask.Address));
-            for (var i = 0; i <= IP.Length - 1; i++)
-                Marshal.WriteByte(cconfig, i + 4, IP[i]);
-            IP = BitConverter.GetBytes(System.Convert.ToUInt32(Mask.Address));
-            for (var i = 0; i <= IP.Length - 1; i++)
-                Marshal.WriteByte(cconfig, i + 8, IP[i]);
-            return DeviceIoControl(DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_CONFIG_TUN, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 12, cconfig, 12,ref Length, IntPtr.Zero);
-        }
-        public bool ConfigPoint2Point(IPAddress LocalIPAddress, IPAddress RemoteIPAddress)
-        {
-            uint Length = 0;
-            IntPtr cconfig = Marshal.AllocHGlobal(8);
-            byte[] IP = BitConverter.GetBytes(System.Convert.ToUInt32(LocalIPAddress.Address));
-            for (var i = 0; i <= IP.Length - 1; i++)
-                Marshal.WriteByte(cconfig, i, IP[i]);
-            IP = BitConverter.GetBytes(System.Convert.ToUInt32(RemoteIPAddress.Address));
-            for (var i = 0; i <= IP.Length - 1; i++)
-                Marshal.WriteByte(cconfig, i + 4, IP[i]);
-            return DeviceIoControl(DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 8, cconfig, 8,ref Length, IntPtr.Zero);
-        }
-
-        public byte[] GetMAC()
-        {
-            uint Length = 0;
-            IntPtr cconfig = Marshal.AllocHGlobal(6);
-            if (DeviceIoControl(DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_GET_MAC, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 6, cconfig, 6,ref Length, IntPtr.Zero))
-            {
-                byte[] ret = new byte[Length - 1 + 1];
-                for (int i = 0; i <= Length - 1; i++)
-                    ret[i] = Marshal.ReadByte(cconfig, i);
-                return ret;
-            }
-            return null;
-        }
-
-        public string GetVersion()
-        {
-            uint Length = 0;
-            IntPtr cconfig = Marshal.AllocHGlobal(12);
-            if (DeviceIoControl(DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_GET_VERSION, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 12, cconfig, 12,ref Length, IntPtr.Zero))
-            {
-                string ret = Marshal.ReadInt32(cconfig, 0) + "." + Marshal.ReadInt32(cconfig, 4);
-                if (Marshal.ReadInt32(cconfig, 8) == 1)
-                    ret += " (DEBUG)";
-                return ret;
-            }
-            return "UNDEFINED";
-        }
-
-        public int GetMTU()
-        {
-            uint Length = 0;
-            IntPtr cconfig = Marshal.AllocHGlobal(4);
-            if (DeviceIoControl(DeviceHandle, CTL_CODE(FILE_DEVICE_UNKNOWN, TAP_WIN_IOCTL_GET_MTU, METHOD_BUFFERED, FILE_ANY_ACCESS), cconfig, 4, cconfig, 4,ref Length, IntPtr.Zero))
-                return Marshal.ReadInt32(cconfig, 0);
-            return -1;
+            byte[] ret = new byte[A.Length + B.Length - 1 + 1];
+            int k = 0;
+            for (var i = 0; i <= A.Length - 1; i++)
+                ret[i] = A[i];
+            k = A.Length;
+            for (var i = k; i <= ret.Length - 1; i++)
+                ret[i] = B[i - k];
+            return ret;
         }
     }
-
 }

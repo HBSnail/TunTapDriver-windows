@@ -550,11 +550,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Administrator\\Desktop\\GitHub\\TunTapDriver-windows\\TunTapDriver-windows\\TunTapDriver-windows.csproj",
-      "projectName": "TunTapDriver-windows",
-      "projectPath": "C:\\Users\\Administrator\\Desktop\\GitHub\\TunTapDriver-windows\\TunTapDriver-windows\\TunTapDriver-windows.csproj",
+      "projectUniqueName": "D:\\FlyingSocket\\UniversalTunTapDriver\\UniversalTunTapDriver.csproj",
+      "projectName": "UniversalTunTapDriver",
+      "projectPath": "D:\\FlyingSocket\\UniversalTunTapDriver\\UniversalTunTapDriver.csproj",
       "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Administrator\\Desktop\\GitHub\\TunTapDriver-windows\\TunTapDriver-windows\\obj\\",
+      "outputPath": "D:\\FlyingSocket\\UniversalTunTapDriver\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -569,6 +569,7 @@
       },
       "frameworks": {
         "netstandard2.0": {
+          "targetAlias": "netstandard2.0",
           "projectReferences": {}
         }
       },
@@ -580,6 +581,7 @@
     },
     "frameworks": {
       "netstandard2.0": {
+        "targetAlias": "netstandard2.0",
         "dependencies": {
           "Microsoft.Win32.Registry": {
             "target": "Package",
@@ -602,7 +604,7 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.401\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.102\\RuntimeIdentifierGraph.json"
       }
     }
   }

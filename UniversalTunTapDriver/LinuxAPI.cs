@@ -374,48 +374,46 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 
  */
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net;
-using TunTapDriver_windows;
-using static TunTapDriver_windows.TunTapHelper;
 
-namespace Test
+using System;
+using System.Runtime.InteropServices;
+
+namespace UniversalTunTapDriver
 {
-    class Program
+    public static class LinuxAPI
     {
-        static void Main(string[] args)
-        {
-            List<TunTapDeviceInfo> list = GetTapGuidList("tap0901");
-            Console.WriteLine("TUN/TAP device info:");
-            for (int i=0;i< list.Count; i++)
-            {
-                Console.WriteLine("==========Device #" + i + "==========");
-                TunTapDevice tunTapDevice = new TunTapDevice(list[i]);
-                Console.WriteLine("  Device name:" + tunTapDevice.Name);
-                Console.WriteLine("  Device GUID:" + tunTapDevice.Guid);
-                Console.WriteLine("  MTU:" + tunTapDevice.GetMTU());
-                Console.WriteLine("  Version:" + tunTapDevice.GetVersion());
-                Console.WriteLine("  MAC:" + Bytes2String(tunTapDevice.GetMAC()).ToUpper());
-                tunTapDevice.CreateDeviceIOStream(65537);
-                tunTapDevice.SetConnectionState(ConnectionStatus.Connected);
-                tunTapDevice.ConfigTun(IPAddress.Parse("192.168.100.100"), IPAddress.Parse("255.255.0.0"));
-                FileStream fs = tunTapDevice.TunTapDeviceIOStream;
-                fs.Close();
-                tunTapDevice.SetConnectionState(ConnectionStatus.Disconnected);
-                tunTapDevice = null;
-            }
-            Console.Read();
-        }
-        static string Bytes2String(byte[] data)
-        {
-            string s = "";
-            for (int i = 0; i < data.Length; i++)
-            {
-               s += data[i].ToString("X2") + "-";
-            }
-            return s.Remove(s.Length-1,1);
-        }
+
+        public const int O_ACCMODE = 0x00000003;
+        public const int O_RDONLY = 0x00000000;
+        public const int O_WRONLY = 0x00000001;
+        public const int O_RDWR = 0x00000002;
+        public const int O_CREAT = 0x00000040;
+        public const int O_EXCL = 0x00000080;
+        public const int O_NOCTTY = 0x00000100;
+        public const int O_TRUNC = 0x00000200;
+        public const int O_APPEND = 0x00000400;
+        public const int O_NONBLOCK = 0x00000800;
+        public const int O_DSYNC = 0x00001000;
+        public const int FASYNC = 0x00002000;
+        public const int O_NOFOLLOW = 0x00020000;
+
+
+
+        [DllImport("libc.so.6", EntryPoint = "open")]
+        public static extern int Open(string fileName, int mode);
+
+        [DllImport("libc.so.6", EntryPoint = "ioctl", SetLastError = true)]
+        public static extern int Ioctl(int fd, UInt32 request, byte[] dat);
+
+        [DllImport("libc.so.6", EntryPoint = "read", SetLastError = true)]
+        internal static extern int Read(int handle, byte[] data, int length);
+
+        [DllImport("libc.so.6", EntryPoint = "write", SetLastError = true)]
+        internal static extern int Write(int handle, byte[] data, int length);
+
     }
 }
+
+
+
+

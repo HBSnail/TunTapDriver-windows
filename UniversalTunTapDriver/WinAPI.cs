@@ -375,80 +375,24 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
  */
 using System;
-using System.Collections.Generic;
 using System.IO;
-using Microsoft.Win32;
+using System.Runtime.InteropServices;
 
-namespace TunTapDriver_windows
+namespace UniversalTunTapDriver
 {
-    public static  class TunTapHelper
+    public static class WinAPI
     {
-        public const  int TAP_WIN_IOCTL_GET_MAC = 1;
-        public const  int TAP_WIN_IOCTL_GET_VERSION = 2;
-        public const  int TAP_WIN_IOCTL_GET_MTU = 3;
-        public const  int TAP_WIN_IOCTL_GET_INFO = 4;
-        public const  int TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT = 5;
-        public const  int TAP_WIN_IOCTL_SET_MEDIA_STATUS = 6;
-        public const  int TAP_WIN_IOCTL_CONFIG_DHCP_MASQ = 7;
-        public const  int TAP_WIN_IOCTL_GET_LOG_LINE = 8;
-        public const  int TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT = 9;
-        public const  int TAP_WIN_IOCTL_CONFIG_TUN = 10;
-        public const  string UsermodeDeviceSpace = @"\\.\\Global\\";
-        public struct TunTapDeviceInfo
-        {
-            public string Name;
-            public string Guid;
-            public TunTapDeviceInfo(string n, string g)
-            {
-                Name = n;
-                Guid = g;
-            }
-        }
+        public const uint FILE_ATTRIBUTE_SYSTEM = 0x4;
+        public const uint FILE_FLAG_OVERLAPPED = 0x40000000;
+        public const uint METHOD_BUFFERED = 0;
+        public const uint FILE_ANY_ACCESS = 0;
+        public const uint FILE_DEVICE_UNKNOWN = 0x22;
 
-        public static List<TunTapDeviceInfo> GetTapGuidList(string iComponentId)
-        {
-            RegistryKey AdaptersInRegistry = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002BE10318}", false);
-            string[] KeyNames = AdaptersInRegistry.GetSubKeyNames();
-            List<TunTapDeviceInfo> TapGuidList = new List<TunTapDeviceInfo>();
-            for (var i = 0; i <= KeyNames.Length - 1; i++)
-            {
-                try
-                {
-                    if (KeyNames[i].Trim().ToLower() == "properties" || KeyNames[i].Trim().ToLower() == "configuration")
-                        continue;
-                    RegistryKey SingleAdapterInRegistry = AdaptersInRegistry.OpenSubKey(KeyNames[i]);
-                    string CID = SingleAdapterInRegistry.GetValue("ComponentId").ToString();
-                    if (CID != null && CID.ToLower().Trim() == iComponentId)
-                    {
-                        string iGuid = SingleAdapterInRegistry.GetValue("NetCfgInstanceId").ToString();
-                        TapGuidList.Add(new TunTapDeviceInfo(GetAdapterNameByGuid(iGuid), iGuid));
-                    }
-                }
-                catch (Exception ex)
-                {
-                }
-            }
-            return TapGuidList;
-        }
-        public enum ConnectionStatus
-        {
-            Connected = 1,
-            Disconnected = 0
-        }
+        [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr CreateFile(string FileName, [MarshalAs(UnmanagedType.U4)] FileAccess DesiredAccess, [MarshalAs(UnmanagedType.U4)] FileShare ShareMode, uint SecurityAttributes, [MarshalAs(UnmanagedType.U4)] FileMode CreationDisposition, uint FlagsAndAttributes, IntPtr TemplateFile);
 
-        public static string GetAdapterNameByGuid(string iGuid)
-        {
-            return Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Network\{4D36E972-E325-11CE-BFC1-08002BE10318}" + @"\" + iGuid + @"\Connection", false).GetValue("Name").ToString();
-        }
 
-        public static IntPtr GetDevicePtrByGuid(string Guid)
-        {
-            return WinAPIHelper.CreateFile(UsermodeDeviceSpace + Guid + ".tap", FileAccess.ReadWrite, FileShare.ReadWrite, 0, FileMode.Open, WinAPIHelper. FILE_ATTRIBUTE_SYSTEM | WinAPIHelper. FILE_FLAG_OVERLAPPED, IntPtr.Zero);
-        }
-        public static uint CTL_CODE(uint iDeviceType, uint iFunction, uint iMethod, uint iAccess)
-        {
-            return ((iDeviceType << 16) | (iAccess << 14) | (iFunction << 2) | iMethod);
-        }
+        [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool DeviceIoControl(IntPtr Device, uint IoControlCode, IntPtr InBuffer, uint InBufferSize, IntPtr OutBuffer, uint OutBufferSize, ref uint BytesReturned, IntPtr Overlapped);
     }
-
 }
