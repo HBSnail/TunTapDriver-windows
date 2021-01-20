@@ -1,6 +1,6 @@
 # UniversalTunTapDriver
 ------
-## A driver for support basic operations on both linux and windows platform.
+## A driver for TUN/TAP devices to support basic operations on both linux and windows platform.
 
 UniversalTunTapDriver is a lightweight library which allows you to  control TUN/TAP devices on your **windows** or **linux** machine easily.
 
